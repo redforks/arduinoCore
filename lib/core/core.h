@@ -23,6 +23,14 @@ typedef byte idType;
 // callback function pointer
 typedef void (*callback)(void);
 
+// compareULong compares two ulong, return 1 if a > b, -1 if a < b, 0 if a ==
+// b.
+//
+// If keep increase unsigned long, it will overflow eventually, compareULong
+// try to do comparation relaibally. It is done by compare to flag value,
+// instead of compare with 0.
+int compareULong(unsigned long a, unsigned long b, unsigned long flag);
+
 // Store of my arduino framework.
 //
 // Store manages two set of values, ditial and analog. These values are not

@@ -2,16 +2,30 @@
 #include <stdarg.h>
 
 namespace core {
+
+int compareULong(unsigned long a, unsigned long b, unsigned long flag) {
+  unsigned long c = a - b;
+  if (c == 0) {
+    return 0;
+  }
+
+  if (c > flag) {
+    return -1;
+  }
+  
+  return 1;
+}
+
 struct Node {
   callback f;
   Node *next;
 
   unsigned long mills, interval;  // only used in clock namespace
 
-  Node(callback fn) : f(fn) {}
-  Node(callback fn, unsigned long delay) : f(fn), mills(delay) {}
+  Node(callback fn) : Node(fn, 0) {}
+  Node(callback fn, unsigned long delay) : Node(fn, delay, 0) {}
   Node(callback fn, unsigned long delay, unsigned long anInterval)
-      : f(fn), mills(delay), interval(anInterval) {}
+      : f(fn), next(NULL), mills(delay), interval(anInterval) {}
 };
 
 struct Queue {
@@ -23,16 +37,13 @@ struct Queue {
   void appendQueue(Queue);
   void remove(Node *);
 
+  Queue() : head(NULL) {}
+
  private:
   bool exist(callback f);
 };
 
 void Queue::add(Node *node) {
-  if (head == NULL) {
-    head = node;
-    return;
-  }
-
   node->next = head;
   head = node;
 }
@@ -40,7 +51,7 @@ void Queue::add(Node *node) {
 void Queue::clear() {
   for (Node *p = head; p != NULL;) {
     Node *next = p->next;
-    delete (p);
+    delete p;
     p = next;
   }
   head = NULL;
@@ -71,17 +82,15 @@ bool Queue::exist(callback f) {
 }
 
 void Queue::remove(Node *node) {
-  if (head == node) {
-    head = head->next;
-    delete (node);
-    return;
-  }
-
-  for (Node *p = head; p != NULL; p = p->next) {
-    if (p->next == node) {
-      p->next = node->next;
-      delete (node);
-      break;
+  for (Node *p = head, *prev = NULL; p != NULL; prev = p, p = p->next) {
+    if (p == node) {
+      if (prev == NULL) {
+        head = p->next;
+      } else {
+        prev->next = p->next;
+        delete node;
+        break;
+      }
     }
   }
 }
@@ -188,14 +197,19 @@ void removeDelay(void *id) { delays.remove((Node *)id); }
 void check() {
   unsigned long cur = millis();
   for (Node *p = delays.head; p != NULL; p = p->next) {
-    if (cur - p->mills >= 0) {
+    if (compareULong(cur, p->mills, (unsigned long)(10) * 24 * 3600 * 1000) >= 0) {
+      Serial.println("run a delay");
       delays.remove(p);
       p->f();
     }
   }
 
   for (Node *p = intervals.head; p != NULL; p = p->next) {
-    if (cur - p->mills >= 0) {
+    if (compareULong(cur, p->mills, (unsigned long)(10) * 24 * 3600 * 1000) >= 0) {
+      Serial.print("run a interval: ");
+      Serial.print(cur);
+      Serial.print(", ");
+      Serial.println(p->mills);
       p->mills = cur + p->interval;
       p->f();
     }

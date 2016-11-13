@@ -3,8 +3,8 @@
 
 namespace core {
 
-int compareULong(unsigned long a, unsigned long b, unsigned long flag) {
-  unsigned long c = a - b;
+int compareULong(uint32_t a, uint32_t b, uint32_t flag) {
+  uint32_t c = a - b;
   if (c == 0) {
     return 0;
   }
@@ -20,11 +20,11 @@ struct Node {
   callback f;
   Node *next;
 
-  unsigned long mills, interval;  // only used in clock namespace
+  uint32_t mills, interval;  // only used in clock namespace
 
   Node(callback fn) : Node(fn, 0) {}
-  Node(callback fn, unsigned long delay) : Node(fn, delay, 0) {}
-  Node(callback fn, unsigned long delay, unsigned long anInterval)
+  Node(callback fn, uint32_t delay) : Node(fn, delay, 0) {}
+  Node(callback fn, uint32_t delay, uint32_t anInterval)
       : f(fn), next(NULL), mills(delay), interval(anInterval) {}
 };
 
@@ -44,8 +44,17 @@ struct Queue {
 };
 
 void Queue::add(Node *node) {
-  node->next = head;
-  head = node;
+  if (head == NULL) {
+    head = node;
+    return;
+  }
+
+  for (Node *p = head; ; p = p->next) {
+    if (p->next == NULL) {
+      p->next = node;
+      break;
+    }
+  }
 }
 
 void Queue::clear() {
@@ -59,6 +68,7 @@ void Queue::clear() {
 
 void Queue::invokeAll() {
   for (Node *p = head; p != NULL; p = p->next) {
+    Serial.println("invokeAll call a function");
     p->f();
   }
 }
@@ -66,7 +76,7 @@ void Queue::invokeAll() {
 // append callbacks, ignored if it exist in Queue.
 void Queue::appendQueue(Queue queue) {
   for (Node *p = queue.head; p != NULL; p = p->next) {
-    if (!Queue::exist(p->f)) {
+    if (!exist(p->f)) {
       add(new Node(p->f));
     }
   }
@@ -88,9 +98,9 @@ void Queue::remove(Node *node) {
         head = p->next;
       } else {
         prev->next = p->next;
-        delete node;
-        break;
       }
+      delete node;
+      break;
     }
   }
 }
@@ -100,7 +110,7 @@ namespace store {
 byte digitals[DIGITAL_VALUES];
 
 // Current value of the analogs.
-word analogs[ANALOG_VALUES];
+uint16_t analogs[ANALOG_VALUES];
 Queue digitalMonitors[DIGITAL_VALUES];
 Queue analogMonitors[ANALOG_VALUES];
 
@@ -131,17 +141,7 @@ void monitorAnalogs(callback f, byte nIds, ...) {
   }
 }
 
-byte inBatch = 0;
 Queue dirtyCallbacks;  // callbacks need trigger when batch end.
-void beginBatchUpdate() { inBatch++; }
-
-void endBatchUpdate() {
-  inBatch--;
-  if (inBatch == 0) {
-    dirtyCallbacks.invokeAll();
-    dirtyCallbacks.clear();
-  }
-}
 
 void setDigital(idType id, byte val) {
   if (digitals[id] == val) {
@@ -150,25 +150,15 @@ void setDigital(idType id, byte val) {
 
   digitals[id] = val;
 
-  if (inBatch == 0) {
-    digitalMonitors[id].invokeAll();
-    return;
-  }
-
   dirtyCallbacks.appendQueue(digitalMonitors[id]);
 }
 
-void setAnalog(idType id, word val) {
+void setAnalog(idType id, uint16_t val) {
   if (analogs[id] == val) {
     return;
   }
 
   analogs[id] = val;
-
-  if (inBatch == 0) {
-    analogMonitors[id].invokeAll();
-    return;
-  }
 
   dirtyCallbacks.appendQueue(analogMonitors[id]);
 }
@@ -178,13 +168,13 @@ namespace clock {
 
 Queue intervals, delays;
 
-void *interval(unsigned long mills, callback f) {
+void *interval(uint32_t mills, callback f) {
   Node *node = new Node(f, mills + millis(), mills);
   intervals.add(node);
   return node;
 }
 
-void *delay(unsigned long mills, callback f) {
+void *delay(uint32_t mills, callback f) {
   Node *node = new Node(f, mills + millis());
   delays.add(node);
   return node;
@@ -195,18 +185,23 @@ void removeInterval(void *id) { intervals.remove((Node *)id); }
 void removeDelay(void *id) { delays.remove((Node *)id); }
 
 void check() {
-  unsigned long cur = millis();
+  if (store::dirtyCallbacks.head != NULL) {
+    store::dirtyCallbacks.invokeAll();
+    store::dirtyCallbacks.clear();
+  }
+
+  uint32_t cur = millis();
   for (Node *p = delays.head; p != NULL; p = p->next) {
-    if (compareULong(cur, p->mills, (unsigned long)(10) * 24 * 3600 * 1000) >= 0) {
+    if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
       Serial.println("run a delay");
-      delays.remove(p);
       p->f();
+      delays.remove(p);
     }
   }
 
   for (Node *p = intervals.head; p != NULL; p = p->next) {
-    if (compareULong(cur, p->mills, (unsigned long)(10) * 24 * 3600 * 1000) >= 0) {
-      Serial.print("run a interval: ");
+    if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
+      Serial.print("\nrun an interval: ");
       Serial.print(cur);
       Serial.print(", ");
       Serial.println(p->mills);

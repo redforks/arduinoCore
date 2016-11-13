@@ -26,10 +26,10 @@ typedef void (*callback)(void);
 // compareULong compares two ulong, return 1 if a > b, -1 if a < b, 0 if a ==
 // b.
 //
-// If keep increase unsigned long, it will overflow eventually, compareULong
+// If keep increase uint32_t, it will overflow eventually, compareULong
 // try to do comparation relaibally. It is done by compare to flag value,
 // instead of compare with 0.
-int compareULong(unsigned long a, unsigned long b, unsigned long flag);
+int compareULong(uint32_t a, uint32_t b, uint32_t flag);
 
 // Store of my arduino framework.
 //
@@ -52,7 +52,7 @@ extern byte digitals[DIGITAL_VALUES];
 
 // Current value of the analogs. Only read analogs, use setAnalog() to
 // change the value.
-extern word analogs[ANALOG_VALUES];
+extern uint16_t analogs[ANALOG_VALUES];
 
 // defineDigital defines a new digital value, returns id of the digital value.
 // Support max DIGITAL_VALUES digital values.
@@ -74,18 +74,11 @@ void monitorDigitals(callback f, byte nIds, ...);
 // monitorAnalogs() several times on a callback.
 void monitorAnalogs(callback f, byte nIds, ...);
 
-// beginBatchUpdate begins batch update. A monitor only get called once, no
-// matter how many values she monitored changed.
-void beginBatchUpdate();
-
-// endBatchUpdate ends batched updates.
-void endBatchUpdate();
-
 // setDigital set digital value, value should be either LOW or HIGH.
 void setDigital(idType id, byte val);
 
 // setAnalog set analog value.
-void setAnalog(idType id, word val);
+void setAnalog(idType id, uint16_t val);
 }
 
 // clock call functions at specific delay or interval.
@@ -93,13 +86,13 @@ namespace clock {
 // interval calls the function every mills. Not calling the function
 // immediately, call it by yourself.
 // Returns clock id, can remove the internal by calling removeInterval().
-void* interval(unsigned long mills, callback f);
+void* interval(uint32_t mills, callback f);
 
 // removeInterval remove the interval, ignored if id is invalid.
 void removeInterval(void* id);
 
 // delays wait for mills, then call the function.
-void* delay(unsigned long mills, callback f);
+void* delay(uint32_t mills, callback f);
 
 // removeDelay drop the delay, ignored if the id invalid or the function has
 // been called.

@@ -193,7 +193,7 @@ void check() {
   uint32_t cur = millis();
   for (Node *p = delays.head; p != NULL; p = p->next) {
     if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
-      Serial.println("run a delay");
+      Serial.println(F("run a delay"));
       p->f();
       delays.remove(p);
     }
@@ -201,9 +201,9 @@ void check() {
 
   for (Node *p = intervals.head; p != NULL; p = p->next) {
     if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
-      Serial.print("\nrun an interval: ");
+      Serial.print(F("\nrun an interval: "));
       Serial.print(cur);
-      Serial.print(", ");
+      Serial.print(F(", "));
       Serial.println(p->mills);
       p->mills = cur + p->interval;
       p->f();

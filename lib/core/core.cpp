@@ -68,7 +68,6 @@ void Queue::clear() {
 
 void Queue::invokeAll() {
   for (Node *p = head; p != NULL; p = p->next) {
-    Serial.println("invokeAll call a function");
     p->f();
   }
 }
@@ -193,7 +192,6 @@ void check() {
   uint32_t cur = millis();
   for (Node *p = delays.head; p != NULL; p = p->next) {
     if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
-      Serial.println(F("run a delay"));
       p->f();
       delays.remove(p);
     }
@@ -201,10 +199,6 @@ void check() {
 
   for (Node *p = intervals.head; p != NULL; p = p->next) {
     if (compareULong(cur, p->mills, (uint32_t)(10) * 24 * 3600 * 1000) >= 0) {
-      Serial.print(F("\nrun an interval: "));
-      Serial.print(cur);
-      Serial.print(F(", "));
-      Serial.println(p->mills);
       p->mills = cur + p->interval;
       p->f();
     }
